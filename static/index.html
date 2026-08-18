@@ -1,0 +1,886 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SETU - Speech-Enabled Translation Utility for Railway Announcements</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg-dark: #0b0f19;
+            --bg-card: #131b2e;
+            --bg-card-hover: #1c2742;
+            --border-color: #233152;
+            --accent-blue: #3b82f6;
+            --accent-cyan: #06b6d4;
+            --accent-emerald: #10b981;
+            --accent-amber: #f59e0b;
+            --accent-purple: #8b5cf6;
+            --text-main: #f3f4f6;
+            --text-sub: #9ca3af;
+            --font-heading: 'Outfit', sans-serif;
+            --font-body: 'Plus Jakarta Sans', sans-serif;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            background-color: var(--bg-dark);
+            color: var(--text-main);
+            font-family: var(--font-body);
+            line-height: 1.6;
+            padding-bottom: 60px;
+        }
+
+        header {
+            background: linear-gradient(135deg, #0d1527 0%, #152238 100%);
+            border-bottom: 1px solid var(--border-color);
+            padding: 24px 32px;
+            position: sticky;
+            top: 0;
+            z-index: 100;
+            backdrop-filter: blur(10px);
+        }
+
+        .header-container {
+            max-width: 1280px;
+            margin: 0 auto;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 16px;
+        }
+
+        .logo-area {
+            display: flex;
+            align-items: center;
+            gap: 14px;
+        }
+
+        .logo-badge {
+            background: linear-gradient(135deg, var(--accent-blue), var(--accent-cyan));
+            color: #fff;
+            font-family: var(--font-heading);
+            font-weight: 800;
+            font-size: 20px;
+            padding: 8px 16px;
+            border-radius: 12px;
+            box-shadow: 0 4px 14px rgba(59, 130, 246, 0.4);
+            letter-spacing: 1px;
+        }
+
+        .logo-title h1 {
+            font-family: var(--font-heading);
+            font-size: 22px;
+            font-weight: 700;
+            letter-spacing: -0.5px;
+            background: linear-gradient(90deg, #ffffff, #93c5fd);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        .logo-title p {
+            font-size: 13px;
+            color: var(--text-sub);
+        }
+
+        .status-badges {
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+        }
+
+        .badge {
+            background: rgba(35, 49, 82, 0.6);
+            border: 1px solid var(--border-color);
+            color: #d1d5db;
+            font-size: 12px;
+            font-weight: 600;
+            padding: 6px 12px;
+            border-radius: 20px;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .badge-dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background-color: var(--accent-emerald);
+            box-shadow: 0 0 8px var(--accent-emerald);
+        }
+
+        main {
+            max-width: 1280px;
+            margin: 32px auto;
+            padding: 0 24px;
+            display: grid;
+            grid-template-columns: 1fr 380px;
+            gap: 32px;
+        }
+
+        @media (max-width: 1024px) {
+            main {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        .section-card {
+            background-color: var(--bg-card);
+            border: 1px solid var(--border-color);
+            border-radius: 16px;
+            padding: 28px;
+            margin-bottom: 24px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+        }
+
+        .section-title {
+            font-family: var(--font-heading);
+            font-size: 18px;
+            font-weight: 700;
+            margin-bottom: 20px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            color: #ffffff;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+            padding-bottom: 12px;
+        }
+
+        .section-title span.icon {
+            font-size: 20px;
+        }
+
+        .form-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 16px;
+            margin-bottom: 20px;
+        }
+
+        .form-group {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+
+        .form-group label {
+            font-size: 13px;
+            font-weight: 600;
+            color: #d1d5db;
+        }
+
+        .form-control {
+            background-color: #0d1322;
+            border: 1px solid var(--border-color);
+            border-radius: 10px;
+            color: #fff;
+            padding: 12px 14px;
+            font-family: var(--font-body);
+            font-size: 14px;
+            transition: all 0.2s ease;
+        }
+
+        .form-control:focus {
+            outline: none;
+            border-color: var(--accent-blue);
+            box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.2);
+        }
+
+        textarea.form-control {
+            min-height: 90px;
+            resize: vertical;
+        }
+
+        .tab-buttons {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 16px;
+            border-bottom: 1px solid var(--border-color);
+            padding-bottom: 10px;
+        }
+
+        .tab-btn {
+            background: none;
+            border: none;
+            color: var(--text-sub);
+            font-family: var(--font-body);
+            font-weight: 600;
+            font-size: 13px;
+            padding: 8px 16px;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+
+        .tab-btn.active {
+            background-color: rgba(59, 130, 246, 0.15);
+            color: var(--accent-blue);
+        }
+
+        .audio-input-area {
+            background: #0d1322;
+            border: 2px dashed var(--border-color);
+            border-radius: 12px;
+            padding: 24px;
+            text-align: center;
+            margin-bottom: 20px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+
+        .audio-input-area:hover {
+            border-color: var(--accent-blue);
+            background: #111a2e;
+        }
+
+        .mic-btn {
+            background: linear-gradient(135deg, #ef4444, #dc2626);
+            color: #fff;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 30px;
+            font-weight: 600;
+            font-size: 14px;
+            cursor: pointer;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            box-shadow: 0 4px 14px rgba(239, 68, 68, 0.4);
+            transition: all 0.2s ease;
+        }
+
+        .mic-btn.recording {
+            animation: pulse 1.5s infinite;
+            background: linear-gradient(135deg, #dc2626, #991b1b);
+        }
+
+        @keyframes pulse {
+            0% { box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.7); }
+            70% { box-shadow: 0 0 0 12px rgba(239, 68, 68, 0); }
+            100% { box-shadow: 0 0 0 0 rgba(239, 68, 68, 0); }
+        }
+
+        .btn-primary {
+            background: linear-gradient(135deg, var(--accent-blue), #2563eb);
+            color: #fff;
+            border: none;
+            border-radius: 10px;
+            padding: 14px 28px;
+            font-family: var(--font-heading);
+            font-weight: 700;
+            font-size: 15px;
+            cursor: pointer;
+            width: 100%;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            gap: 10px;
+            box-shadow: 0 4px 16px rgba(37, 99, 235, 0.4);
+            transition: all 0.2s ease;
+        }
+
+        .btn-primary:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 6px 20px rgba(37, 99, 235, 0.5);
+        }
+
+        .spinner {
+            width: 18px;
+            height: 18px;
+            border: 3px solid rgba(255, 255, 255, 0.3);
+            border-radius: 50%;
+            border-top-color: #fff;
+            animation: spin 0.8s linear infinite;
+            display: none;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+
+        /* Language Output Matrix */
+        .language-matrix {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+            gap: 16px;
+            margin-top: 20px;
+        }
+
+        .lang-card {
+            background: #0d1322;
+            border: 1px solid var(--border-color);
+            border-radius: 12px;
+            padding: 16px;
+            position: relative;
+            transition: all 0.2s ease;
+        }
+
+        .lang-card:hover {
+            border-color: var(--accent-blue);
+            transform: translateY(-2px);
+            box-shadow: 0 6px 16px rgba(0, 0, 0, 0.4);
+        }
+
+        .lang-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 10px;
+        }
+
+        .lang-name {
+            font-family: var(--font-heading);
+            font-weight: 700;
+            font-size: 15px;
+            color: #ffffff;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .dtmf-badge {
+            background: rgba(139, 92, 246, 0.2);
+            border: 1px solid rgba(139, 92, 246, 0.5);
+            color: #c4b5fd;
+            font-size: 11px;
+            font-weight: 700;
+            padding: 2px 8px;
+            border-radius: 6px;
+        }
+
+        .lang-text {
+            font-size: 13px;
+            color: #d1d5db;
+            margin-bottom: 14px;
+            min-height: 48px;
+            line-height: 1.5;
+        }
+
+        audio {
+            width: 100%;
+            height: 36px;
+            border-radius: 6px;
+        }
+
+        /* IVR Simulator Phone Side Panel */
+        .phone-container {
+            background: #090d16;
+            border: 2px solid var(--border-color);
+            border-radius: 32px;
+            padding: 24px;
+            box-shadow: 0 20px 50px rgba(0, 0, 0, 0.6);
+            position: sticky;
+            top: 110px;
+        }
+
+        .phone-screen {
+            background: #111827;
+            border: 1px solid var(--border-color);
+            border-radius: 20px;
+            padding: 20px;
+            text-align: center;
+            margin-bottom: 20px;
+            min-height: 140px;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .phone-status {
+            font-size: 12px;
+            color: var(--accent-emerald);
+            font-weight: 700;
+            letter-spacing: 1px;
+            margin-bottom: 6px;
+            text-transform: uppercase;
+        }
+
+        .phone-display {
+            font-family: var(--font-heading);
+            font-size: 16px;
+            font-weight: 600;
+            color: #fff;
+            margin-bottom: 4px;
+        }
+
+        .phone-sub {
+            font-size: 12px;
+            color: var(--text-sub);
+        }
+
+        .dialpad {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 12px;
+            margin-bottom: 20px;
+        }
+
+        .key-btn {
+            background: #1e293b;
+            border: 1px solid var(--border-color);
+            border-radius: 50%;
+            width: 64px;
+            height: 64px;
+            margin: 0 auto;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            cursor: pointer;
+            transition: all 0.15s ease;
+            user-select: none;
+        }
+
+        .key-btn:hover {
+            background: #334155;
+            border-color: var(--accent-blue);
+            transform: scale(1.05);
+        }
+
+        .key-btn:active {
+            transform: scale(0.95);
+            background: var(--accent-blue);
+        }
+
+        .key-num {
+            font-family: var(--font-heading);
+            font-size: 20px;
+            font-weight: 700;
+            color: #fff;
+            line-height: 1;
+        }
+
+        .key-sub {
+            font-size: 9px;
+            color: var(--text-sub);
+            font-weight: 600;
+            margin-top: 2px;
+        }
+
+        .call-btn {
+            background: linear-gradient(135deg, var(--accent-emerald), #059669);
+            color: #fff;
+            border: none;
+            border-radius: 30px;
+            padding: 14px;
+            width: 100%;
+            font-family: var(--font-heading);
+            font-weight: 700;
+            font-size: 15px;
+            cursor: pointer;
+            box-shadow: 0 4px 16px rgba(16, 185, 129, 0.4);
+            transition: all 0.2s ease;
+        }
+
+        .call-btn.active {
+            background: linear-gradient(135deg, #ef4444, #dc2626);
+            box-shadow: 0 4px 16px rgba(239, 68, 68, 0.4);
+        }
+
+        .instructions-box {
+            background: rgba(30, 41, 59, 0.5);
+            border: 1px dashed var(--border-color);
+            border-radius: 12px;
+            padding: 16px;
+            margin-top: 20px;
+            font-size: 12px;
+            color: var(--text-sub);
+        }
+
+        .instructions-box code {
+            background: #090d16;
+            color: var(--accent-cyan);
+            padding: 2px 6px;
+            border-radius: 4px;
+            font-family: monospace;
+        }
+    </style>
+</head>
+<body>
+
+    <header>
+        <div class="header-container">
+            <div class="logo-area">
+                <div class="logo-badge">SETU</div>
+                <div class="logo-title">
+                    <h1>Speech-Enabled Translation Utility</h1>
+                    <p>Real-Time IVR Multilingual Railway Station Announcements</p>
+                </div>
+            </div>
+            <div class="status-badges">
+                <div class="badge"><span class="badge-dot"></span> FastAPI Backend</div>
+                <div class="badge"><span class="badge-dot"></span> Whisper STT</div>
+                <div class="badge"><span class="badge-dot"></span> IndicTrans2 / Indic Translator</div>
+                <div class="badge"><span class="badge-dot"></span> GCP TTS / gTTS</div>
+                <div class="badge"><span class="badge-dot"></span> SQLite Audio Cache</div>
+            </div>
+        </div>
+    </header>
+
+    <main>
+        <!-- Left Side: Station Control & Announcement Generator -->
+        <div class="left-column">
+            
+            <div class="section-card">
+                <div class="section-title">
+                    <span class="icon">📢</span> Station Announcement Recorder & Translator
+                </div>
+
+                <form id="announcement-form">
+                    <div class="form-grid">
+                        <div class="form-group">
+                            <label for="station_code">Station Code</label>
+                            <input type="text" id="station_code" class="form-control" value="NDLS" placeholder="e.g. NDLS, MAS, SBC" required>
+                        </div>
+                        <div class="form-group">
+                            <label for="platform_number">Platform Number</label>
+                            <input type="text" id="platform_number" class="form-control" value="1" placeholder="e.g. 1, 2A, 3" required>
+                        </div>
+                    </div>
+
+                    <div class="tab-buttons">
+                        <button type="button" class="tab-btn active" onclick="switchInputMode('text')">Text Input</button>
+                        <button type="button" class="tab-btn" onclick="switchInputMode('audio')">Upload / Record Audio</button>
+                    </div>
+
+                    <div id="text-input-section" class="form-group" style="margin-bottom: 20px;">
+                        <label for="transcript">Announcement Transcript (English or Source Language)</label>
+                        <textarea id="transcript" class="form-control" placeholder="Type station announcement here...">Attention passengers: Train number 12951 Rajdhani Express from New Delhi to Mumbai Central is arriving shortly on platform number 1.</textarea>
+                    </div>
+
+                    <div id="audio-input-section" class="audio-input-area" style="display: none;">
+                        <button type="button" id="mic-btn" class="mic-btn" onclick="toggleMicrophone()">
+                            <span id="mic-icon">🎙️</span> <span id="mic-label">Record Announcement</span>
+                        </button>
+                        <p style="font-size: 12px; color: var(--text-sub); margin-top: 12px;">or click to select an audio file (.mp3, .wav, .m4a)</p>
+                        <input type="file" id="audio_file" accept="audio/*" style="display: none;" onchange="handleFileSelect(event)">
+                        <div id="file-name-display" style="font-size: 13px; color: var(--accent-cyan); margin-top: 8px; font-weight: 600;"></div>
+                    </div>
+
+                    <button type="submit" class="btn-primary">
+                        <div id="submit-spinner" class="spinner"></div>
+                        <span id="submit-label">Synthesize & Cache Multilingual Audio</span>
+                    </button>
+                </form>
+            </div>
+
+            <!-- Multilingual Output Matrix -->
+            <div class="section-card">
+                <div class="section-title">
+                    <span class="icon">🌐</span> Cached Multilingual Audio Streams (9 Indic Languages)
+                </div>
+                <p style="font-size: 13px; color: var(--text-sub); margin-bottom: 16px;">
+                    Passengers dialing the IVR number select key 1-9 to hear the corresponding cached audio.
+                </p>
+
+                <div id="language-matrix" class="language-matrix">
+                    <!-- Dynamic Language Cards -->
+                    <div style="grid-column: 1 / -1; text-align: center; padding: 40px; color: var(--text-sub);">
+                        Submit an announcement above to generate and preview cached translations.
+                    </div>
+                </div>
+            </div>
+
+        </div>
+
+        <!-- Right Side: Interactive IVR Phone Simulator -->
+        <div class="right-column">
+            <div class="phone-container">
+                <div class="phone-screen">
+                    <div id="phone-status" class="phone-status">READY TO DIAL</div>
+                    <div id="phone-display" class="phone-display">Dial +91-IVR-SETU</div>
+                    <div id="phone-sub" class="phone-sub">Press CALL to test IVR experience</div>
+                </div>
+
+                <div class="dialpad">
+                    <div class="key-btn" onclick="pressKey('1')">
+                        <div class="key-num">1</div>
+                        <div class="key-sub">Hindi</div>
+                    </div>
+                    <div class="key-btn" onclick="pressKey('2')">
+                        <div class="key-num">2</div>
+                        <div class="key-sub">Tamil</div>
+                    </div>
+                    <div class="key-btn" onclick="pressKey('3')">
+                        <div class="key-num">3</div>
+                        <div class="key-sub">Telugu</div>
+                    </div>
+                    <div class="key-btn" onclick="pressKey('4')">
+                        <div class="key-num">4</div>
+                        <div class="key-sub">Kannada</div>
+                    </div>
+                    <div class="key-btn" onclick="pressKey('5')">
+                        <div class="key-num">5</div>
+                        <div class="key-sub">Marathi</div>
+                    </div>
+                    <div class="key-btn" onclick="pressKey('6')">
+                        <div class="key-num">6</div>
+                        <div class="key-sub">Bengali</div>
+                    </div>
+                    <div class="key-btn" onclick="pressKey('7')">
+                        <div class="key-num">7</div>
+                        <div class="key-sub">Gujarati</div>
+                    </div>
+                    <div class="key-btn" onclick="pressKey('8')">
+                        <div class="key-num">8</div>
+                        <div class="key-sub">Malayalam</div>
+                    </div>
+                    <div class="key-btn" onclick="pressKey('9')">
+                        <div class="key-num">9</div>
+                        <div class="key-sub">Punjabi</div>
+                    </div>
+                </div>
+
+                <button id="call-toggle-btn" class="call-btn" onclick="toggleCall()">
+                    📞 START IVR DEMO CALL
+                </button>
+
+                <div class="instructions-box">
+                    <strong style="color: #fff; display: block; margin-bottom: 4px;">Twilio Webhook Setup:</strong>
+                    1. Run <code>ngrok http 8000</code><br>
+                    2. Copy your public ngrok URL.<br>
+                    3. Configure Twilio Phone Number Webhook:<br>
+                    <code>[NGROK_URL]/api/ivr/incoming</code>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <!-- Hidden Audio Player for Phone Simulator -->
+    <audio id="simulator-audio-player" style="display: none;"></audio>
+
+    <script>
+        let inputMode = 'text';
+        let mediaRecorder = null;
+        let audioChunks = [];
+        let recordedBlob = null;
+        let isCallActive = false;
+
+        function switchInputMode(mode) {
+            inputMode = mode;
+            document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active'));
+            if (mode === 'text') {
+                document.querySelectorAll('.tab-btn')[0].classList.add('active');
+                document.getElementById('text-input-section').style.display = 'block';
+                document.getElementById('audio-input-section').style.display = 'none';
+            } else {
+                document.querySelectorAll('.tab-btn')[1].classList.add('active');
+                document.getElementById('text-input-section').style.display = 'none';
+                document.getElementById('audio-input-section').style.display = 'block';
+            }
+        }
+
+        document.getElementById('audio-input-section').addEventListener('click', (e) => {
+            if (e.target.id !== 'mic-btn' && !e.target.closest('#mic-btn')) {
+                document.getElementById('audio_file').click();
+            }
+        });
+
+        function handleFileSelect(event) {
+            const file = event.target.files[0];
+            if (file) {
+                document.getElementById('file-name-display').innerText = `Selected File: ${file.name}`;
+            }
+        }
+
+        async function toggleMicrophone() {
+            const micBtn = document.getElementById('mic-btn');
+            const micLabel = document.getElementById('mic-label');
+
+            if (mediaRecorder && mediaRecorder.state === 'recording') {
+                mediaRecorder.stop();
+                micBtn.classList.remove('recording');
+                micLabel.innerText = 'Record Announcement';
+                return;
+            }
+
+            try {
+                const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+                mediaRecorder = new MediaRecorder(stream);
+                audioChunks = [];
+
+                mediaRecorder.ondataavailable = event => {
+                    audioChunks.push(event.data);
+                };
+
+                mediaRecorder.onstop = () => {
+                    recordedBlob = new Blob(audioChunks, { type: 'audio/wav' });
+                    document.getElementById('file-name-display').innerText = 'Microphone Recording Captured (Ready)';
+                };
+
+                mediaRecorder.start();
+                micBtn.classList.add('recording');
+                micLabel.innerText = 'Stop Recording...';
+            } catch (err) {
+                alert('Microphone access denied or not supported in this browser.');
+            }
+        }
+
+        document.getElementById('announcement-form').addEventListener('submit', async (e) => {
+            e.preventDefault();
+
+            const submitBtn = document.querySelector('.btn-primary');
+            const spinner = document.getElementById('submit-spinner');
+            const label = document.getElementById('submit-label');
+
+            spinner.style.display = 'inline-block';
+            label.innerText = 'Processing & Synthesizing...';
+            submitBtn.disabled = true;
+
+            const formData = new FormData();
+            formData.append('station_code', document.getElementById('station_code').value);
+            formData.append('platform_number', document.getElementById('platform_number').value);
+            formData.append('transcript', document.getElementById('transcript').value);
+
+            const fileInput = document.getElementById('audio_file');
+            if (fileInput.files.length > 0) {
+                formData.append('audio_file', fileInput.files[0]);
+            } else if (recordedBlob) {
+                formData.append('audio_file', recordedBlob, 'recorded_announcement.wav');
+            }
+
+            try {
+                const response = await fetch('/api/announcements/upload', {
+                    method: 'POST',
+                    body: formData
+                });
+
+                const data = await response.json();
+                if (response.ok && data.status === 'success') {
+                    renderLanguageMatrix(data.announcement.cached_translations);
+                } else {
+                    alert('Processing error: ' + (data.message || 'Failed to process announcement'));
+                }
+            } catch (err) {
+                console.error(err);
+                alert('Server communication error.');
+            } finally {
+                spinner.style.display = 'none';
+                label.innerText = 'Synthesize & Cache Multilingual Audio';
+                submitBtn.disabled = false;
+            }
+        });
+
+        function renderLanguageMatrix(translations) {
+            const matrix = document.getElementById('language-matrix');
+            matrix.innerHTML = '';
+
+            const keypadMap = {
+                'hi': '1', 'ta': '2', 'te': '3', 'kn': '4',
+                'mr': '5', 'bn': '6', 'gu': '7', 'ml': '8', 'pa': '9'
+            };
+
+            translations.forEach(item => {
+                const dtmfKey = keypadMap[item.language_code] || 'N/A';
+                const card = document.createElement('div');
+                card.className = 'lang-card';
+                card.innerHTML = `
+                    <div class="lang-header">
+                        <div class="lang-name">${item.language_name}</div>
+                        <div class="dtmf-badge">Keypad: ${dtmfKey}</div>
+                    </div>
+                    <div class="lang-text">${item.translated_text}</div>
+                    <audio controls src="${item.audio_url}"></audio>
+                `;
+                matrix.appendChild(card);
+            });
+        }
+
+        // Phone Simulator Controls
+        function toggleCall() {
+            const btn = document.getElementById('call-toggle-btn');
+            const status = document.getElementById('phone-status');
+            const display = document.getElementById('phone-display');
+            const sub = document.getElementById('phone-sub');
+            const audioPlayer = document.getElementById('simulator-audio-player');
+
+            if (!isCallActive) {
+                isCallActive = true;
+                btn.innerText = '❌ END CALL';
+                btn.classList.add('active');
+                status.innerText = 'CALL IN PROGRESS';
+                display.innerText = 'Connected to SETU IVR';
+                sub.innerText = 'Press keypad digits 1-9 to select language';
+                
+                // Play simulated greeting
+                playTTSPrompt('Welcome to SETU Railway Announcement Utility. Please press 1 for Hindi, 2 for Tamil, 3 for Telugu, 4 for Kannada, 5 for Marathi, 6 for Bengali.');
+            } else {
+                isCallActive = false;
+                btn.innerText = '📞 START IVR DEMO CALL';
+                btn.classList.remove('active');
+                status.innerText = 'READY TO DIAL';
+                display.innerText = 'Dial +91-IVR-SETU';
+                sub.innerText = 'Press CALL to test IVR experience';
+                audioPlayer.pause();
+            }
+        }
+
+        async function pressKey(digit) {
+            if (!isCallActive) {
+                toggleCall();
+            }
+
+            const status = document.getElementById('phone-status');
+            const display = document.getElementById('phone-display');
+            const sub = document.getElementById('phone-sub');
+            const audioPlayer = document.getElementById('simulator-audio-player');
+
+            status.innerText = `KEY ${digit} PRESSED`;
+            display.innerText = `Fetching Language Option...`;
+
+            const formData = new FormData();
+            formData.append('digit', digit);
+            formData.append('station', document.getElementById('station_code').value);
+            formData.append('platform', document.getElementById('platform_number').value);
+
+            try {
+                const res = await fetch('/api/ivr/demo-call', {
+                    method: 'POST',
+                    body: formData
+                });
+                const data = await res.json();
+                if (res.ok && data.status === 'success') {
+                    display.innerText = `Playing ${data.language_name}`;
+                    sub.innerText = data.translated_text;
+
+                    audioPlayer.src = data.audio_url;
+                    audioPlayer.play();
+                }
+            } catch (err) {
+                console.error(err);
+            }
+        }
+
+        function playTTSPrompt(text) {
+            if ('speechSynthesis' in window) {
+                const utterance = new SpeechSynthesisUtterance(text);
+                utterance.rate = 1.0;
+                window.speechSynthesis.speak(utterance);
+            }
+        }
+
+        // Load existing announcements on startup
+        window.addEventListener('DOMContentLoaded', async () => {
+            try {
+                const res = await fetch('/api/announcements');
+                const data = await res.json();
+                if (res.ok && data.announcements && data.announcements.length > 0) {
+                    renderLanguageMatrix(data.announcements[0].cached_translations);
+                }
+            } catch (e) {
+                console.log('No prior cached announcements found.');
+            }
+        });
+    </script>
+</body>
+</html>
