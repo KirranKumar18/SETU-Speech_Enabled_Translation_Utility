@@ -28,7 +28,7 @@ class TestSynthesisRequest(BaseModel):
 @router.post("/upload")
 async def upload_announcement(
     station_code: str = Form(...),
-    platform_number: str = Form(...),
+    platform_number: Optional[str] = Form("1"),
     transcript: Optional[str] = Form(None),
     source_language: Optional[str] = Form("en"),
     audio_file: Optional[UploadFile] = File(None)
@@ -38,7 +38,7 @@ async def upload_announcement(
     Processes STT -> Multilingual Translation -> TTS Synthesis -> SQLite Cache.
     """
     station_code = station_code.strip().upper()
-    platform_number = platform_number.strip().upper()
+    platform_number = platform_number.strip().upper() if platform_number else "1"
 
     final_transcript = ""
 
@@ -59,6 +59,16 @@ async def upload_announcement(
     if not final_transcript:
         # Default placeholder demo announcement if neither audio nor text was provided
         final_transcript = f"Attention passengers: Train number 12951 Express to Mumbai Central is arriving on platform number {platform_number}."
+
+    print("\n" + "="*70)
+    print("📢  [SETU NEW ANNOUNCEMENT RECEIVED]")
+    print(f"   Station Code    : {station_code}")
+    print(f"   Platform Number : {platform_number}")
+    print(f"   Source Language : {source_language}")
+    print(f"   Full Transcript : \"{final_transcript}\"")
+    print("="*70 + "\n", flush=True)
+
+    logger.info(f"Processing announcement for {station_code} P{platform_number}: '{final_transcript}'")
 
     # 1. Save original announcement record in SQLite DB
     announcement = save_announcement(
@@ -125,10 +135,13 @@ async def upload_announcement(
 async def get_announcements():
     """Retrieve all announcements and their cached translated audio files."""
     data = list_all_announcements()
-    # Format full URLs for audio
+    # Format full URLs for audio and add language display names
     for ann in data:
         for trans in ann.get("cached_translations", []):
             trans["audio_url"] = f"{settings.BASE_URL}/static/{trans['audio_file_path']}"
+            trans["language_name"] = settings.SUPPORTED_LANGUAGES.get(
+                trans.get("language_code", ""), trans.get("language_code", "").upper()
+            )
     return {"status": "success", "count": len(data), "announcements": data}
 
 @router.post("/test-synthesis")

@@ -42,6 +42,16 @@ def transcribe_audio_file(audio_path: str, language: str = None) -> Dict[str, An
             transcript_text = result.get("text", "").strip()
             detected_lang = result.get("language", language or "en")
 
+            print("\n" + "="*70)
+            print("🎙️  [SETU SPEECH-TO-TEXT TRANSCRIPTION]")
+            print(f"   Audio File        : {os.path.basename(audio_path)}")
+            print(f"   Detected Language : {detected_lang}")
+            print(f"   Transcribed Text  : {transcript_text}")
+            print(f"   STT Engine        : OpenAI Whisper ({getattr(model, 'name', 'base')})")
+            print("="*70 + "\n", flush=True)
+
+            logger.info(f"Whisper STT Output: lang={detected_lang}, text='{transcript_text}'")
+
             return {
                 "text": transcript_text,
                 "language": detected_lang,
@@ -51,8 +61,17 @@ def transcribe_audio_file(audio_path: str, language: str = None) -> Dict[str, An
             logger.error(f"Whisper transcription error: {e}")
 
     # Fallback response for missing audio decoder / demo fallback
+    fallback_text = "Attention passengers: Train number 12951 Express from New Delhi to Mumbai Central is arriving shortly on platform number 1."
+    print("\n" + "="*70)
+    print("🎙️  [SETU SPEECH-TO-TEXT TRANSCRIPTION (FALLBACK)]")
+    print(f"   Audio File        : {os.path.basename(audio_path)}")
+    print(f"   Language          : en")
+    print(f"   Transcribed Text  : {fallback_text}")
+    print(f"   STT Engine        : Fallback Simulator")
+    print("="*70 + "\n", flush=True)
+
     return {
-        "text": "Attention passengers: Train number 12951 Express from New Delhi to Mumbai Central is arriving shortly on platform number 1.",
+        "text": fallback_text,
         "language": "en",
         "engine": "STT Fallback"
     }

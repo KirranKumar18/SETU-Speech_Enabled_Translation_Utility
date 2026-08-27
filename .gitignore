@@ -1,1 +1,63 @@
+# Python Bytecode & Cache
+__pycache__/
+*.py[cod]
+*$py.class
+*.pyc
+*.pyo
+*.pyd
+
+# Virtual Environments
+venv/
+.venv/
+env/
+ENV/
+env.bak/
+venv.bak/
+
+# Environment Variables & Secrets
 .env
+.env*.local
+*.key
+*.pem
+google-credentials.json
+service-account*.json
+
+# SQLite & Database Cache
+*.db
+*.sqlite
+*.sqlite3
+setu_cache.db
+
+# Generated Static Audio Cache
+static/audio/*
+!static/audio/.gitkeep
+
+# IDEs & Code Editors
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+
+# Operating System Files
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+
+# Testing & Coverage
+.pytest_cache/
+.coverage
+htmlcov/
+.tox/
+.nox/
+.hypothesis/
+
+# Logs & Temporary Files
+*.log
+*.tmp
+temp/
+tmp/
