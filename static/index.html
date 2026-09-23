@@ -41,9 +41,26 @@
                 </div>
 
                 <form id="announcement-form">
-                    <div class="form-group" style="margin-bottom: 16px;">
-                        <label for="station_code">Station Code</label>
-                        <input type="text" id="station_code" class="form-control" value="NDLS" placeholder="e.g. NDLS, MAS, SBC" required>
+                    <div class="form-grid">
+                        <div class="form-group">
+                            <label for="station_code">Station Code</label>
+                            <input type="text" id="station_code" class="form-control" value="NDLS" placeholder="e.g. NDLS, MAS, SBC" required>
+                        </div>
+                        <div class="form-group">
+                            <label for="source_language">Speaking / Source Language</label>
+                            <select id="source_language" class="form-control">
+                                <option value="en">English</option>
+                                <option value="hi">Hindi (हिन्दी)</option>
+                                <option value="ta">Tamil (தமிழ்)</option>
+                                <option value="te">Telugu (తెలుగు)</option>
+                                <option value="kn">Kannada (ಕನ್ನಡ)</option>
+                                <option value="mr">Marathi (मराठी)</option>
+                                <option value="bn">Bengali (বাংলা)</option>
+                                <option value="gu">Gujarati (ગુજરાતી)</option>
+                                <option value="ml">Malayalam (മലയാളം)</option>
+                                <option value="pa">Punjabi (ਪੰਜਾਬੀ)</option>
+                            </select>
+                        </div>
                     </div>
 
                     <div class="tab-buttons">
@@ -53,7 +70,19 @@
 
                     <div id="text-input-section" class="form-group" style="margin-bottom: 20px;">
                         <label for="transcript">Announcement Transcript (English or Source Language)</label>
-                        <textarea id="transcript" class="form-control" placeholder="Type station announcement here...">Attention passengers: Train number 12951 Rajdhani Express from New Delhi to Mumbai Central is arriving shortly on platform number 1.</textarea>
+                        <div class="textarea-voice-wrapper">
+                            <textarea id="transcript" class="form-control" placeholder="Type station announcement here...">Attention passengers: Train number 12951 Rajdhani Express from New Delhi to Mumbai Central is arriving shortly on platform number 1.</textarea>
+                            <button type="button" id="voice-input-btn" class="voice-input-btn" onclick="handleVoiceInput()" title="Record voice and convert to text">
+                                <span id="voice-input-icon">🎤</span>
+                            </button>
+                        </div>
+                        <!-- Multi-step progress indicator -->
+                        <div id="voice-steps" class="voice-steps" style="display: none;">
+                            <div class="voice-step" id="vs-record"><span class="step-dot"></span> Recording voice...</div>
+                            <div class="voice-step" id="vs-upload"><span class="step-dot"></span> Uploading audio...</div>
+                            <div class="voice-step" id="vs-transcribe"><span class="step-dot"></span> Detecting language & transcribing...</div>
+                            <div class="voice-step" id="vs-done"><span class="step-dot"></span> Done — ready to translate!</div>
+                        </div>
                     </div>
 
                     <div id="audio-input-section" class="audio-input-area" style="display: none;">
@@ -162,6 +191,9 @@
         let mediaRecorder = null;
         let audioChunks = [];
         let recordedBlob = null;
+        let voiceRecorder = null;
+        let voiceChunks = [];
+        let isVoiceRecording = false;
         let isCallActive = false;
 
         // Language code to display name mapping
@@ -250,6 +282,7 @@
             const formData = new FormData();
             formData.append('station_code', (document.getElementById('station_code')?.value || 'NDLS').trim());
             formData.append('platform_number', '1');
+            formData.append('source_language', document.getElementById('source_language').value);
 
             // Always send the transcript text (even in audio mode, send whatever is in the text field)
             const transcriptText = document.getElementById('transcript').value.trim();
@@ -457,6 +490,132 @@
                 const utterance = new SpeechSynthesisUtterance(text);
                 utterance.rate = 1.0;
                 window.speechSynthesis.speak(utterance);
+            }
+        }
+
+        // ==========================================
+        // Voice Input — Record + Whisper Auto-Detect
+        // ==========================================
+        let voiceMicRecorder = null;
+        let voiceMicChunks = [];
+
+        function setVoiceStep(stepId, state) {
+            const el = document.getElementById(stepId);
+            if (!el) return;
+            el.className = 'voice-step ' + state;
+        }
+
+        function resetVoiceSteps() {
+            ['vs-record', 'vs-upload', 'vs-transcribe', 'vs-done'].forEach(id => setVoiceStep(id, 'pending'));
+        }
+
+        async function handleVoiceInput() {
+            const btn = document.getElementById('voice-input-btn');
+            const icon = document.getElementById('voice-input-icon');
+            const stepsPanel = document.getElementById('voice-steps');
+            const textarea = document.getElementById('transcript');
+
+            // If currently recording, stop
+            if (isVoiceRecording && voiceMicRecorder && voiceMicRecorder.state === 'recording') {
+                voiceMicRecorder.stop();
+                return;
+            }
+
+            // Start recording
+            try {
+                const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+                voiceMicRecorder = new MediaRecorder(stream);
+                voiceMicChunks = [];
+
+                // Show steps
+                textarea.value = '';
+                stepsPanel.style.display = 'flex';
+                resetVoiceSteps();
+                setVoiceStep('vs-record', 'active');
+
+                btn.classList.add('voice-recording');
+                icon.textContent = '⏹️';
+                isVoiceRecording = true;
+
+                voiceMicRecorder.ondataavailable = (e) => voiceMicChunks.push(e.data);
+
+                voiceMicRecorder.onstop = async () => {
+                    isVoiceRecording = false;
+                    btn.classList.remove('voice-recording');
+                    icon.textContent = '🎤';
+
+                    // Release mic
+                    stream.getTracks().forEach(t => t.stop());
+                    setVoiceStep('vs-record', 'done');
+
+                    if (voiceMicChunks.length === 0) {
+                        setVoiceStep('vs-upload', 'error');
+                        return;
+                    }
+
+                    const audioBlob = new Blob(voiceMicChunks, { type: 'audio/webm' });
+
+                    // Step 2: Upload
+                    setVoiceStep('vs-upload', 'active');
+                    const formData = new FormData();
+                    formData.append('audio_file', audioBlob, 'voice_recording.webm');
+
+                    try {
+                        const res = await fetch('/api/announcements/voice-transcribe', {
+                            method: 'POST',
+                            body: formData
+                        });
+
+                        setVoiceStep('vs-upload', 'done');
+                        setVoiceStep('vs-transcribe', 'active');
+
+                        if (!res.ok) {
+                            const errData = await res.json().catch(() => null);
+                            setVoiceStep('vs-transcribe', 'error');
+                            alert('Transcription error: ' + (errData?.detail || `Server returned ${res.status}`));
+                            return;
+                        }
+
+                        const data = await res.json();
+
+                        if (data.status === 'success' && data.transcript) {
+                            setVoiceStep('vs-transcribe', 'done');
+
+                            // Fill textarea with transcript
+                            textarea.value = data.transcript;
+
+                            // Auto-set source language dropdown from detected language
+                            if (data.detected_language) {
+                                const langSelect = document.getElementById('source_language');
+                                const detectedLang = data.detected_language.toLowerCase();
+                                // Check if the detected language exists in the dropdown
+                                const optionExists = Array.from(langSelect.options).some(o => o.value === detectedLang);
+                                if (optionExists) {
+                                    langSelect.value = detectedLang;
+                                }
+                            }
+
+                            setVoiceStep('vs-done', 'done');
+
+                            // Flash textarea
+                            textarea.classList.add('voice-filled');
+                            setTimeout(() => textarea.classList.remove('voice-filled'), 2000);
+                        } else {
+                            setVoiceStep('vs-transcribe', 'error');
+                            alert('No speech detected. Please try again.');
+                        }
+                    } catch (err) {
+                        console.error('Voice transcription error:', err);
+                        setVoiceStep('vs-upload', 'error');
+                        alert('Server communication error: ' + err.message);
+                    }
+                };
+
+                voiceMicRecorder.start();
+            } catch (err) {
+                console.error('Microphone access error:', err);
+                alert('Microphone access denied or not supported.');
+                stepsPanel.style.display = 'none';
             }
         }
 

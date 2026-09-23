@@ -287,9 +287,13 @@ def translate_to_all_supported_languages(text: str, source_lang: str = "en") -> 
     """Translates input transcript into all supported regional languages and logs output."""
     supported_langs = ["hi", "ta", "te", "kn", "mr", "bn", "gu", "ml", "pa"]
     lang_names = {
-        "hi": "Hindi", "ta": "Tamil", "te": "Telugu", "kn": "Kannada",
+        "en": "English", "hi": "Hindi", "ta": "Tamil", "te": "Telugu", "kn": "Kannada",
         "mr": "Marathi", "bn": "Bengali", "gu": "Gujarati", "ml": "Malayalam", "pa": "Punjabi"
     }
+
+    # When source is non-English, also translate to English
+    if source_lang.lower() != "en" and "en" not in supported_langs:
+        supported_langs = ["en"] + supported_langs
 
     results = {}
 

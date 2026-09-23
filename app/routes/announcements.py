@@ -144,6 +144,39 @@ async def get_announcements():
             )
     return {"status": "success", "count": len(data), "announcements": data}
 
+@router.post("/voice-transcribe")
+async def voice_transcribe(
+    audio_file: UploadFile = File(...)
+):
+    """
+    Accept a voice recording from the browser microphone,
+    run Speech-to-Text transcription via Whisper, and return the text.
+    This powers the 'Voice Input' button on the Text Input tab.
+    """
+    try:
+        contents = await audio_file.read()
+        if len(contents) == 0:
+            raise HTTPException(status_code=400, detail="Empty audio file received.")
+
+        stt_result = transcribe_audio_bytes(contents, filename=f"voice_{audio_file.filename}")
+        transcript = stt_result.get("text", "").strip()
+        detected_lang = stt_result.get("language", "en")
+        engine = stt_result.get("engine", "unknown")
+
+        logger.info(f"Voice transcription complete: lang={detected_lang}, engine={engine}, text='{transcript}'")
+
+        return {
+            "status": "success",
+            "transcript": transcript,
+            "detected_language": detected_lang,
+            "engine": engine
+        }
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Voice transcription error: {e}")
+        raise HTTPException(status_code=500, detail=f"Transcription failed: {str(e)}")
+
 @router.post("/test-synthesis")
 async def test_synthesis(req: TestSynthesisRequest):
     """On-the-fly single language translation and speech synthesis test."""

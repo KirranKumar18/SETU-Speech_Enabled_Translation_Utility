@@ -1,4 +1,4 @@
-# Python Bytecode & Cache
+# Py,thon Bytecode & Cache
 __pycache__/
 *.py[cod]
 *$py.class

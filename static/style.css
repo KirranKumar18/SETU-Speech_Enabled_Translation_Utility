@@ -542,3 +542,144 @@ audio {
     border-radius: 4px;
     font-family: monospace;
 }
+
+/* ============================================================
+   Voice Input Button (inside textarea)
+   ============================================================ */
+.textarea-voice-wrapper {
+    position: relative;
+}
+
+.textarea-voice-wrapper textarea {
+    width: 100%;
+    min-height: 100px;
+    padding-right: 56px;
+    resize: vertical;
+}
+
+.voice-input-btn {
+    position: absolute;
+    right: 10px;
+    bottom: 10px;
+    width: 38px;
+    height: 38px;
+    border-radius: 50%;
+    border: 2px solid var(--accent-cyan);
+    background: rgba(6, 182, 212, 0.15);
+    color: var(--accent-cyan);
+    font-size: 17px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.25s ease;
+    z-index: 2;
+    backdrop-filter: blur(4px);
+}
+
+.voice-input-btn:hover {
+    background: rgba(6, 182, 212, 0.3);
+    border-color: #22d3ee;
+    transform: scale(1.12);
+    box-shadow: 0 0 16px rgba(6, 182, 212, 0.4);
+}
+
+.voice-input-btn.voice-recording {
+    border-color: #ef4444;
+    background: rgba(239, 68, 68, 0.2);
+    animation: voicePulse 1.2s infinite;
+}
+
+@keyframes voicePulse {
+    0%   { box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.6); }
+    70%  { box-shadow: 0 0 0 14px rgba(239, 68, 68, 0); }
+    100% { box-shadow: 0 0 0 0 rgba(239, 68, 68, 0); }
+}
+
+/* ============================================================
+   Voice Multi-Step Progress
+   ============================================================ */
+.voice-steps {
+    display: flex;
+    gap: 8px;
+    margin-top: 12px;
+    flex-wrap: wrap;
+}
+
+.voice-step {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 12px;
+    font-weight: 600;
+    color: #4b5563;
+    padding: 5px 12px;
+    border-radius: 20px;
+    background: rgba(255, 255, 255, 0.03);
+    border: 1px solid rgba(255, 255, 255, 0.06);
+    transition: all 0.3s ease;
+}
+
+.voice-step .step-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: #374151;
+    transition: all 0.3s ease;
+    flex-shrink: 0;
+}
+
+/* Pending */
+.voice-step.pending { color: #4b5563; }
+.voice-step.pending .step-dot { background: #374151; }
+
+/* Active */
+.voice-step.active {
+    color: var(--accent-amber);
+    background: rgba(245, 158, 11, 0.08);
+    border-color: rgba(245, 158, 11, 0.3);
+}
+.voice-step.active .step-dot {
+    background: var(--accent-amber);
+    box-shadow: 0 0 8px var(--accent-amber);
+    animation: stepBlink 0.8s infinite alternate;
+}
+
+@keyframes stepBlink {
+    from { opacity: 1; }
+    to   { opacity: 0.3; }
+}
+
+/* Done */
+.voice-step.done {
+    color: var(--accent-emerald);
+    background: rgba(16, 185, 129, 0.08);
+    border-color: rgba(16, 185, 129, 0.3);
+}
+.voice-step.done .step-dot {
+    background: var(--accent-emerald);
+    box-shadow: 0 0 8px var(--accent-emerald);
+}
+
+/* Error */
+.voice-step.error {
+    color: #ef4444;
+    background: rgba(239, 68, 68, 0.08);
+    border-color: rgba(239, 68, 68, 0.3);
+}
+.voice-step.error .step-dot {
+    background: #ef4444;
+    box-shadow: 0 0 8px #ef4444;
+}
+
+/* Flash when transcript fills */
+textarea.voice-filled {
+    animation: textareaFlash 0.5s ease 2;
+    border-color: var(--accent-emerald) !important;
+    box-shadow: 0 0 0 3px rgba(16, 185, 129, 0.25) !important;
+}
+
+@keyframes textareaFlash {
+    0%, 100% { background-color: #0d1322; }
+    50%      { background-color: rgba(16, 185, 129, 0.1); }
+}
