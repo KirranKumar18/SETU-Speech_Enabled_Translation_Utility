@@ -1,0 +1,469 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Station Announcer Dispatch Console | Indian Railways</title>
+    <!-- Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600;700&family=Outfit:wght@500;600;700;800&family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+
+    <!-- Header -->
+    <header>
+        <div class="header-container">
+            <div class="brand-section">
+                <div class="rail-emblem">🚆</div>
+                <div class="brand-title">
+                    <h1>
+                        Station Announcer Console
+                        <span class="badge-port">PORT 8001</span>
+                    </h1>
+                    <p id="station-zone-label">Indian Railways Public Address & Dispatch System</p>
+                </div>
+            </div>
+
+            <div class="station-control-bar">
+                <div class="station-select-group">
+                    <label for="station-code-select">Station Code:</label>
+                    <select id="station-code-select" class="station-dropdown" onchange="switchStation()">
+                        <option value="NDLS">NDLS - New Delhi</option>
+                        <option value="MAS">MAS - Chennai Central</option>
+                        <option value="SBC">SBC - KSR Bengaluru</option>
+                        <option value="CSMT">CSMT - Mumbai CSMT</option>
+                    </select>
+                </div>
+
+                <div class="status-indicator">
+                    <div class="pulse-dot"></div>
+                    <span id="dispatch-status">DISPATCH ONLINE</span>
+                </div>
+
+                <div id="station-clock" class="clock-display">10:45:00</div>
+            </div>
+        </div>
+    </header>
+
+    <!-- Main Console Grid -->
+    <main>
+        <!-- Left Column: Standard Announcements -->
+        <div class="left-column">
+            
+            <!-- Announcement Composer Card -->
+            <div class="console-card">
+                <div class="card-header">
+                    <div class="card-title">
+                        <span>📢</span> Compose Standard Announcement
+                    </div>
+                    <span class="card-badge">LIVE MIC & DISPATCH</span>
+                </div>
+
+                <!-- Quick Presets -->
+                <div style="font-size: 12px; color: var(--text-muted); margin-bottom: 6px; font-weight: 600;">QUICK RAILWAY PRESETS:</div>
+                <div class="preset-chips">
+                    <button type="button" class="preset-chip" onclick="applyPreset('arrival')">🚆 Train Arrival (Rajdhani)</button>
+                    <button type="button" class="preset-chip" onclick="applyPreset('departure')">🟢 Ready for Departure (Shatabdi)</button>
+                    <button type="button" class="preset-chip" onclick="applyPreset('delay')">⏳ 30 Min Delay (Duronto)</button>
+                    <button type="button" class="preset-chip" onclick="applyPreset('vandebharat')">⚡ Vande Bharat Arrival</button>
+                </div>
+
+                <form id="announcement-form" onsubmit="handleAnnouncementSubmit(event)">
+                    <div class="form-grid">
+                        <div class="form-group">
+                            <label for="ann-train-no">Train Number</label>
+                            <input type="text" id="ann-train-no" class="form-control" placeholder="e.g. 12951" value="12951">
+                        </div>
+                        <div class="form-group">
+                            <label for="ann-train-name">Train Name</label>
+                            <input type="text" id="ann-train-name" class="form-control" placeholder="e.g. Rajdhani Express" value="Rajdhani Express">
+                        </div>
+                        <div class="form-group">
+                            <label for="ann-platform">Platform No.</label>
+                            <input type="text" id="ann-platform" class="form-control" placeholder="1" value="1">
+                        </div>
+                    </div>
+
+                    <div class="form-group" style="margin-bottom: 16px;">
+                        <label for="ann-transcript">Announcement Text (Broadcasted to Station & Pulled by SETU)</label>
+                        <textarea id="ann-transcript" class="form-control" rows="3" required>Attention passengers: Train number 12951 Rajdhani Express from New Delhi to Mumbai Central is arriving shortly on platform number 1.</textarea>
+                    </div>
+
+                    <button type="submit" id="btn-broadcast-ann" class="btn-broadcast">
+                        <div class="wave-anim">
+                            <span class="wave-bar"></span>
+                            <span class="wave-bar"></span>
+                            <span class="wave-bar"></span>
+                        </div>
+                        <span>BROADCAST ANNOUNCEMENT TO SETU (PORT 8000)</span>
+                    </button>
+                </form>
+            </div>
+
+            <!-- Published Announcements List -->
+            <div class="console-card">
+                <div class="card-header">
+                    <div class="card-title">
+                        <span>📋</span> Station Announcements Log
+                    </div>
+                    <span id="ann-count-badge" class="card-badge">0 Broadcasts</span>
+                </div>
+
+                <div id="announcements-feed" class="feed-container">
+                    <!-- Dynamic Items -->
+                </div>
+            </div>
+
+        </div>
+
+        <!-- Right Column: Sudden Alerts Section -->
+        <div class="right-column">
+            
+            <!-- Sudden Alerts Dispatcher Card -->
+            <div class="console-card alert-card">
+                <div class="card-header">
+                    <div class="card-title danger">
+                        <span>🚨</span> Sudden Alerts & Emergency Broadcast
+                    </div>
+                    <span class="card-badge" style="background: rgba(239, 68, 68, 0.25); color: #fca5a5;">PRIORITY OVERRIDE</span>
+                </div>
+
+                <p style="font-size: 13px; color: var(--text-secondary); margin-bottom: 14px;">
+                    Sudden alerts trigger immediate high-priority notifications on the SETU system and update all passenger translation feeds instantly.
+                </p>
+
+                <!-- Sudden Alert Presets -->
+                <div style="font-size: 12px; color: #fca5a5; margin-bottom: 6px; font-weight: 600;">QUICK EMERGENCY PRESETS:</div>
+                <div class="preset-chips">
+                    <button type="button" class="preset-chip alert-chip" onclick="applyAlertPreset('platform_shift')">🔄 Sudden Platform Shift (Plat 1 → Plat 4)</button>
+                    <button type="button" class="preset-chip alert-chip" onclick="applyAlertPreset('emergency_stop')">🛑 Emergency Technical Stop</button>
+                    <button type="button" class="preset-chip alert-chip" onclick="applyAlertPreset('security')">🛡️ Security Alert (Unattended Luggage)</button>
+                    <button type="button" class="preset-chip alert-chip" onclick="applyAlertPreset('fog')">🌫️ Dense Fog Emergency Speed Limit</button>
+                </div>
+
+                <form id="alert-form" onsubmit="handleAlertSubmit(event)">
+                    <div class="form-grid">
+                        <div class="form-group">
+                            <label for="alert-type">Alert Category</label>
+                            <select id="alert-type" class="form-control">
+                                <option value="platform_change">Platform Change</option>
+                                <option value="emergency">Emergency Inspection</option>
+                                <option value="delay">Critical Delay</option>
+                                <option value="security">Security Advisory</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label for="alert-priority">Priority Level</label>
+                            <select id="alert-priority" class="form-control">
+                                <option value="CRITICAL">CRITICAL (Red Alert)</option>
+                                <option value="WARNING">WARNING (Amber)</option>
+                                <option value="INFO">ADVISORY (Yellow)</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label for="alert-platform">Affected Platform</label>
+                            <input type="text" id="alert-platform" class="form-control" value="Platform 1 -> 4">
+                        </div>
+                    </div>
+
+                    <div class="form-group" style="margin-bottom: 16px;">
+                        <label for="alert-transcript">Sudden Alert Transcript</label>
+                        <textarea id="alert-transcript" class="form-control" rows="3" style="border-color: rgba(239, 68, 68, 0.4);" required>URGENT ALERT: Attention passengers, due to technical maintenance, Train number 12951 Rajdhani Express will now arrive on Platform 4 instead of Platform 1. Please move to Platform 4 immediately.</textarea>
+                    </div>
+
+                    <button type="submit" class="btn-alert">
+                        <span>🚨 BROADCAST SUDDEN ALERT TO SETU</span>
+                    </button>
+                </form>
+            </div>
+
+            <!-- Active Sudden Alerts List -->
+            <div class="console-card">
+                <div class="card-header">
+                    <div class="card-title">
+                        <span>⚡</span> Active Sudden Alerts On-Air
+                    </div>
+                    <span id="alert-count-badge" class="card-badge">0 Active</span>
+                </div>
+
+                <div id="alerts-feed" class="feed-container">
+                    <!-- Dynamic Alert Items -->
+                </div>
+            </div>
+
+        </div>
+    </main>
+
+    <!-- Toast Notification -->
+    <div id="announcer-toast">Announcement broadcasted successfully!</div>
+
+    <script>
+        let currentStation = 'NDLS';
+
+        // Digital Clock
+        function updateClock() {
+            const now = new Date();
+            const timeStr = now.toTimeString().split(' ')[0];
+            document.getElementById('station-clock').innerText = timeStr;
+        }
+        setInterval(updateClock, 1000);
+        updateClock();
+
+        // Audio Chime using Web Audio API synthesizer
+        function playChime(isAlert = false) {
+            try {
+                const ctx = new (window.AudioContext || window.webkitAudioContext)();
+                const now = ctx.currentTime;
+                
+                if (isAlert) {
+                    // Urgent double beep
+                    [0, 0.18].forEach(offset => {
+                        const osc = ctx.createOscillator();
+                        const gain = ctx.createGain();
+                        osc.type = 'sawtooth';
+                        osc.frequency.setValueAtTime(880, now + offset);
+                        gain.gain.setValueAtTime(0.15, now + offset);
+                        gain.gain.exponentialRampToValueAtTime(0.01, now + offset + 0.14);
+                        osc.connect(gain);
+                        gain.connect(ctx.destination);
+                        osc.start(now + offset);
+                        osc.stop(now + offset + 0.15);
+                    });
+                } else {
+                    // Pleasant two-tone station chime (Ding-Dong)
+                    const freqs = [587.33, 880]; // D5, A5
+                    freqs.forEach((freq, idx) => {
+                        const osc = ctx.createOscillator();
+                        const gain = ctx.createGain();
+                        osc.type = 'sine';
+                        osc.frequency.setValueAtTime(freq, now + idx * 0.2);
+                        gain.gain.setValueAtTime(0.15, now + idx * 0.2);
+                        gain.gain.exponentialRampToValueAtTime(0.001, now + idx * 0.2 + 0.4);
+                        osc.connect(gain);
+                        gain.connect(ctx.destination);
+                        osc.start(now + idx * 0.2);
+                        osc.stop(now + idx * 0.2 + 0.45);
+                    });
+                }
+            } catch (e) {
+                console.log('Web Audio chime unavailable:', e);
+            }
+        }
+
+        function showToast(msg, isAlert = false) {
+            const toast = document.getElementById('announcer-toast');
+            toast.innerText = msg;
+            toast.style.borderColor = isAlert ? 'var(--accent-danger)' : 'var(--accent-emerald)';
+            toast.style.display = 'block';
+            setTimeout(() => {
+                toast.style.display = 'none';
+            }, 3000);
+        }
+
+        // Preset templates
+        function applyPreset(type) {
+            const st = currentStation;
+            if (type === 'arrival') {
+                document.getElementById('ann-train-no').value = '12951';
+                document.getElementById('ann-train-name').value = 'Rajdhani Express';
+                document.getElementById('ann-platform').value = '1';
+                document.getElementById('ann-transcript').value = `Attention passengers: Train number 12951 Rajdhani Express from ${st} to Mumbai Central is arriving shortly on platform number 1.`;
+            } else if (type === 'departure') {
+                document.getElementById('ann-train-no').value = '12004';
+                document.getElementById('ann-train-name').value = 'Lucknow Shatabdi';
+                document.getElementById('ann-platform').value = '4';
+                document.getElementById('ann-transcript').value = `May I have your attention please: Train number 12004 Lucknow Shatabdi Express is ready for departure from platform number 4. Passengers are requested to board.`;
+            } else if (type === 'delay') {
+                document.getElementById('ann-train-no').value = '12260';
+                document.getElementById('ann-train-name').value = 'Duronto Express';
+                document.getElementById('ann-platform').value = '2';
+                document.getElementById('ann-transcript').value = `Attention passengers: Train number 12260 Duronto Express is running late by 30 minutes. Expected arrival at platform number 2. We regret the inconvenience caused.`;
+            } else if (type === 'vandebharat') {
+                document.getElementById('ann-train-no').value = '22436';
+                document.getElementById('ann-train-name').value = 'Vande Bharat Express';
+                document.getElementById('ann-platform').value = '16';
+                document.getElementById('ann-transcript').value = `Attention please: Train number 22436 Vande Bharat Express to Varanasi is arriving on platform number 16.`;
+            }
+        }
+
+        function applyAlertPreset(type) {
+            if (type === 'platform_shift') {
+                document.getElementById('alert-type').value = 'platform_change';
+                document.getElementById('alert-priority').value = 'CRITICAL';
+                document.getElementById('alert-platform').value = 'Platform 1 -> 4';
+                document.getElementById('alert-transcript').value = `URGENT ALERT: Due to technical maintenance on track 1, Train number 12951 Rajdhani Express has been shifted to Platform number 4. Please proceed to Platform 4 immediately.`;
+            } else if (type === 'emergency_stop') {
+                document.getElementById('alert-type').value = 'emergency';
+                document.getElementById('alert-priority').value = 'CRITICAL';
+                document.getElementById('alert-platform').value = 'Platform 2';
+                document.getElementById('alert-transcript').value = `EMERGENCY ALERT: Train number 12002 Bhopal Shatabdi is held outside outer signal for track inspection. All passengers are advised to wait on platform number 2.`;
+            } else if (type === 'security') {
+                document.getElementById('alert-type').value = 'security';
+                document.getElementById('alert-priority').value = 'WARNING';
+                document.getElementById('alert-platform').value = 'All Platforms';
+                document.getElementById('alert-transcript').value = `SECURITY NOTICE: Passengers are requested not to touch any unidentified objects or unattended baggage on platforms and immediately report to Railway Protection Force.`;
+            } else if (type === 'fog') {
+                document.getElementById('alert-type').value = 'delay';
+                document.getElementById('alert-priority').value = 'WARNING';
+                document.getElementById('alert-platform').value = 'Northern Line';
+                document.getElementById('alert-transcript').value = `WEATHER ADVISORY: Due to heavy fog in northern sectors, all outbound express trains are operating under caution speed with an average delay of 45 minutes.`;
+            }
+        }
+
+        // Switch station
+        async function switchStation() {
+            currentStation = document.getElementById('station-code-select').value;
+            await loadStationFeed();
+        }
+
+        // Fetch announcements and alerts
+        async function loadStationFeed() {
+            try {
+                const res = await fetch(`/api/station/${currentStation}/feed`);
+                const data = await res.json();
+                
+                // Update station zone label
+                document.getElementById('station-zone-label').innerText = `${data.station_name} | ${data.zone}`;
+
+                // Render announcements
+                const annFeed = document.getElementById('announcements-feed');
+                document.getElementById('ann-count-badge').innerText = `${data.announcements.length} Broadcasts`;
+
+                if (data.announcements.length === 0) {
+                    annFeed.innerHTML = '<div style="color: var(--text-muted); padding: 20px; text-align: center;">No announcements broadcasted yet for this station.</div>';
+                } else {
+                    annFeed.innerHTML = data.announcements.map(ann => `
+                        <div class="feed-item">
+                            <div class="feed-item-header">
+                                <div class="feed-item-tags">
+                                    <span class="tag-platform">PLATFORM ${ann.platform_number}</span>
+                                    ${ann.train_number ? `<span class="tag-train">${ann.train_number} ${ann.train_name}</span>` : ''}
+                                </div>
+                                <span style="font-family: var(--font-mono); font-size: 11px;">${ann.created_at}</span>
+                            </div>
+                            <div class="feed-item-body">
+                                "${escapeHtml(ann.transcript)}"
+                            </div>
+                        </div>
+                    `).join('');
+                }
+
+                // Render alerts
+                const alertsFeed = document.getElementById('alerts-feed');
+                document.getElementById('alert-count-badge').innerText = `${data.active_alerts.length} Active`;
+
+                if (data.active_alerts.length === 0) {
+                    alertsFeed.innerHTML = '<div style="color: var(--text-muted); padding: 20px; text-align: center;">No active sudden alerts. All station operations normal.</div>';
+                } else {
+                    alertsFeed.innerHTML = data.active_alerts.map(alt => `
+                        <div class="active-alert-box">
+                            <div>
+                                <div style="display: flex; gap: 8px; align-items: center; margin-bottom: 6px;">
+                                    <span class="tag-alert">🚨 ${alt.priority}</span>
+                                    <span style="font-size: 11px; color: #fca5a5; font-family: var(--font-mono);">${alt.platform_number}</span>
+                                    <span style="font-size: 11px; color: var(--text-muted); font-family: var(--font-mono);">${alt.created_at}</span>
+                                </div>
+                                <div style="font-size: 13.5px; color: #fee2e2; font-weight: 500;">
+                                    "${escapeHtml(alt.transcript)}"
+                                </div>
+                            </div>
+                            <button class="btn-dismiss" onclick="dismissAlert(${alt.id})">Dismiss</button>
+                        </div>
+                    `).join('');
+                }
+
+            } catch (err) {
+                console.error('Error loading station feed:', err);
+            }
+        }
+
+        // Submit standard announcement
+        async function handleAnnouncementSubmit(e) {
+            e.preventDefault();
+            const btn = document.getElementById('btn-broadcast-ann');
+            btn.disabled = true;
+
+            const payload = {
+                train_number: document.getElementById('ann-train-no').value,
+                train_name: document.getElementById('ann-train-name').value,
+                platform_number: document.getElementById('ann-platform').value,
+                transcript: document.getElementById('ann-transcript').value,
+                source_language: 'en'
+            };
+
+            try {
+                const res = await fetch(`/api/station/${currentStation}/announcements`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                });
+                if (res.ok) {
+                    playChime(false);
+                    showToast(`📢 Announcement Broadcasted for ${currentStation}! SETU can now pull it.`);
+                    await loadStationFeed();
+                } else {
+                    alert('Failed to publish announcement.');
+                }
+            } catch (err) {
+                console.error(err);
+                alert('Connection error communicating with announcer backend.');
+            } finally {
+                btn.disabled = false;
+            }
+        }
+
+        // Submit sudden alert
+        async function handleAlertSubmit(e) {
+            e.preventDefault();
+            const payload = {
+                alert_type: document.getElementById('alert-type').value,
+                priority: document.getElementById('alert-priority').value,
+                platform_number: document.getElementById('alert-platform').value,
+                transcript: document.getElementById('alert-transcript').value,
+                source_language: 'en'
+            };
+
+            try {
+                const res = await fetch(`/api/station/${currentStation}/alerts`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                });
+                if (res.ok) {
+                    playChime(true);
+                    showToast(`🚨 SUDDEN ALERT BROADCASTED FOR ${currentStation}!`, true);
+                    await loadStationFeed();
+                } else {
+                    alert('Failed to dispatch alert.');
+                }
+            } catch (err) {
+                console.error(err);
+                alert('Connection error dispatching alert.');
+            }
+        }
+
+        async function dismissAlert(alertId) {
+            try {
+                await fetch(`/api/station/${currentStation}/alerts/${alertId}`, {
+                    method: 'DELETE'
+                });
+                await loadStationFeed();
+            } catch (err) {
+                console.error(err);
+            }
+        }
+
+        function escapeHtml(text) {
+            if (!text) return '';
+            return text.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+        }
+
+        // Initialize on load
+        loadStationFeed();
+        // Periodically refresh the feed list every 5 seconds
+        setInterval(loadStationFeed, 5000);
+    </script>
+</body>
+</html>

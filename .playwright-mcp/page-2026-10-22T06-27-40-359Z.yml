@@ -1,0 +1,126 @@
+- generic [active] [ref=e1]:
+  - banner [ref=e2]:
+    - generic [ref=e3]:
+      - generic [ref=e4]:
+        - generic [ref=e5]: 🚆
+        - generic [ref=e6]:
+          - heading "Station Announcer Console PORT 8001" [level=1] [ref=e7]:
+            - text: Station Announcer Console
+            - generic [ref=e8]: PORT 8001
+          - paragraph [ref=e9]: New Delhi Railway Station | Northern Railway (NR)
+      - generic [ref=e10]:
+        - generic [ref=e11]:
+          - generic [ref=e12]: "Station Code:"
+          - combobox "Station Code:" [ref=e13] [cursor=pointer]:
+            - option "NDLS - New Delhi" [selected]
+            - option "MAS - Chennai Central"
+            - option "SBC - KSR Bengaluru"
+            - option "CSMT - Mumbai CSMT"
+        - generic [ref=e14]: DISPATCH ONLINE
+        - generic [ref=e17]: 11:57:40
+  - main [ref=e18]:
+    - generic [ref=e19]:
+      - generic [ref=e20]:
+        - generic [ref=e21]:
+          - generic [ref=e22]:
+            - generic [ref=e23]: 📢
+            - text: Compose Standard Announcement
+          - generic [ref=e24]: LIVE MIC & DISPATCH
+        - generic [ref=e25]: "QUICK RAILWAY PRESETS:"
+        - generic [ref=e26]:
+          - button "🚆 Train Arrival (Rajdhani)" [ref=e27] [cursor=pointer]
+          - button "🟢 Ready for Departure (Shatabdi)" [ref=e28] [cursor=pointer]
+          - button "⏳ 30 Min Delay (Duronto)" [ref=e29] [cursor=pointer]
+          - button "⚡ Vande Bharat Arrival" [ref=e30] [cursor=pointer]
+        - generic [ref=e31]:
+          - generic [ref=e32]:
+            - generic [ref=e33]:
+              - generic [ref=e34]: Train Number
+              - textbox "Train Number" [ref=e35]:
+                - /placeholder: e.g. 12951
+                - text: "12951"
+            - generic [ref=e36]:
+              - generic [ref=e37]: Train Name
+              - textbox "Train Name" [ref=e38]:
+                - /placeholder: e.g. Rajdhani Express
+                - text: Rajdhani Express
+            - generic [ref=e39]:
+              - generic [ref=e40]: Platform No.
+              - textbox "Platform No." [ref=e41]:
+                - /placeholder: "1"
+                - text: "1"
+          - generic [ref=e42]:
+            - generic [ref=e43]: Announcement Text (Broadcasted to Station & Pulled by SETU)
+            - textbox "Announcement Text (Broadcasted to Station & Pulled by SETU)" [ref=e44]: "Attention passengers: Train number 12951 Rajdhani Express from New Delhi to Mumbai Central is arriving shortly on platform number 1."
+          - button "BROADCAST ANNOUNCEMENT TO SETU (PORT 8000)" [ref=e45] [cursor=pointer]
+      - generic [ref=e51]:
+        - generic [ref=e52]:
+          - generic [ref=e53]:
+            - generic [ref=e54]: 📋
+            - text: Station Announcements Log
+          - generic [ref=e55]: 2 Broadcasts
+        - generic [ref=e56]:
+          - generic [ref=e57]:
+            - generic [ref=e58]:
+              - generic [ref=e59]:
+                - generic [ref=e60]: PLATFORM 4
+                - generic [ref=e61]: 12004 Lucknow Shatabdi
+              - generic [ref=e62]: 11:54:58
+            - generic [ref=e63]: "\"May I have your attention please: Train number 12004 Lucknow Shatabdi Express is ready for departure from platform number 4.\""
+          - generic [ref=e64]:
+            - generic [ref=e65]:
+              - generic [ref=e66]:
+                - generic [ref=e67]: PLATFORM 1
+                - generic [ref=e68]: 12951 Rajdhani Express
+              - generic [ref=e69]: 11:54:58
+            - generic [ref=e70]: "\"Attention passengers: Train number 12951 Rajdhani Express from New Delhi to Mumbai Central is arriving shortly on platform number 1.\""
+    - generic [ref=e71]:
+      - generic [ref=e72]:
+        - generic [ref=e73]:
+          - generic [ref=e74]:
+            - generic [ref=e75]: 🚨
+            - text: Sudden Alerts & Emergency Broadcast
+          - generic [ref=e76]: PRIORITY OVERRIDE
+        - paragraph [ref=e77]: Sudden alerts trigger immediate high-priority notifications on the SETU system and update all passenger translation feeds instantly.
+        - generic [ref=e78]: "QUICK EMERGENCY PRESETS:"
+        - generic [ref=e79]:
+          - button "🔄 Sudden Platform Shift (Plat 1 → Plat 4)" [ref=e80] [cursor=pointer]
+          - button "🛑 Emergency Technical Stop" [ref=e81] [cursor=pointer]
+          - button "🛡️ Security Alert (Unattended Luggage)" [ref=e82] [cursor=pointer]
+          - button "🌫️ Dense Fog Emergency Speed Limit" [ref=e83] [cursor=pointer]
+        - generic [ref=e84]:
+          - generic [ref=e85]:
+            - generic [ref=e86]:
+              - generic [ref=e87]: Alert Category
+              - combobox "Alert Category" [ref=e88]:
+                - option "Platform Change" [selected]
+                - option "Emergency Inspection"
+                - option "Critical Delay"
+                - option "Security Advisory"
+            - generic [ref=e89]:
+              - generic [ref=e90]: Priority Level
+              - combobox "Priority Level" [ref=e91]:
+                - option "CRITICAL (Red Alert)" [selected]
+                - option "WARNING (Amber)"
+                - option "ADVISORY (Yellow)"
+            - generic [ref=e92]:
+              - generic [ref=e93]: Affected Platform
+              - textbox "Affected Platform" [ref=e94]: Platform 1 -> 4
+          - generic [ref=e95]:
+            - generic [ref=e96]: Sudden Alert Transcript
+            - textbox "Sudden Alert Transcript" [ref=e97]: "URGENT ALERT: Attention passengers, due to technical maintenance, Train number 12951 Rajdhani Express will now arrive on Platform 4 instead of Platform 1. Please move to Platform 4 immediately."
+          - button "🚨 BROADCAST SUDDEN ALERT TO SETU" [ref=e98] [cursor=pointer]
+      - generic [ref=e100]:
+        - generic [ref=e101]:
+          - generic [ref=e102]:
+            - generic [ref=e103]: ⚡
+            - text: Active Sudden Alerts On-Air
+          - generic [ref=e104]: 1 Active
+        - generic [ref=e106]:
+          - generic [ref=e107]:
+            - generic [ref=e108]:
+              - generic [ref=e109]: 🚨 CRITICAL
+              - generic [ref=e110]: PLATFORM 1 -> 4
+              - generic [ref=e111]: 11:56:57
+            - generic [ref=e112]: "\"URGENT: Train 12951 shifted to Platform 4 immediately due to track maintenance!\""
+          - button "Dismiss" [ref=e113] [cursor=pointer]

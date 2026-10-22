@@ -1,7 +1,7 @@
 import os
 from datetime import datetime
 from typing import Optional, List, Dict, Any
-from sqlalchemy import create_engine, Column, Integer, String, Text, DateTime, ForeignKey, Index
+from sqlalchemy import create_engine, Column, Integer, String, Text, DateTime, ForeignKey, Index, text
 from sqlalchemy.orm import declarative_base, sessionmaker, relationship
 from app.config import settings
 
@@ -15,6 +15,8 @@ class AnnouncementRecord(Base):
     platform_number = Column(String(20), nullable=False, index=True)
     original_transcript = Column(Text, nullable=False)
     source_language = Column(String(10), default="en")
+    is_alert = Column(Integer, default=0)
+    alert_priority = Column(String(20), default="NORMAL")
     created_at = Column(DateTime, default=datetime.utcnow)
 
     cached_audios = relationship("CachedAudioRecord", back_populates="announcement", cascade="all, delete-orphan")
@@ -46,10 +48,29 @@ engine = create_engine(
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 
 def init_db():
-    """Initialize SQLite database tables."""
+    """Initialize SQLite database tables and apply lightweight migrations if needed."""
     Base.metadata.create_all(bind=engine)
+    # Check if is_alert / alert_priority columns exist in existing table
+    with engine.connect() as conn:
+        try:
+            conn.execute(text("ALTER TABLE announcements ADD COLUMN is_alert INTEGER DEFAULT 0"))
+            conn.commit()
+        except Exception:
+            pass
+        try:
+            conn.execute(text("ALTER TABLE announcements ADD COLUMN alert_priority VARCHAR(20) DEFAULT 'NORMAL'"))
+            conn.commit()
+        except Exception:
+            pass
 
-def save_announcement(station_code: str, platform_number: str, original_transcript: str, source_language: str = "en") -> AnnouncementRecord:
+def save_announcement(
+    station_code: str,
+    platform_number: str,
+    original_transcript: str,
+    source_language: str = "en",
+    is_alert: bool = False,
+    alert_priority: str = "NORMAL"
+) -> AnnouncementRecord:
     """Create or update an announcement entry."""
     db = SessionLocal()
     try:
@@ -61,7 +82,9 @@ def save_announcement(station_code: str, platform_number: str, original_transcri
             station_code=st_code,
             platform_number=p_num,
             original_transcript=original_transcript,
-            source_language=source_language
+            source_language=source_language,
+            is_alert=1 if is_alert else 0,
+            alert_priority=alert_priority.upper() if alert_priority else "NORMAL"
         )
         db.add(announcement)
         db.commit()
@@ -160,6 +183,8 @@ def get_latest_announcement(station_code: Optional[str] = None, platform_number:
                 "platform_number": announcement.platform_number,
                 "original_transcript": announcement.original_transcript,
                 "source_language": announcement.source_language,
+                "is_alert": bool(getattr(announcement, "is_alert", 0)),
+                "alert_priority": getattr(announcement, "alert_priority", "NORMAL"),
                 "created_at": announcement.created_at.isoformat()
             }
         return None
@@ -188,6 +213,8 @@ def list_all_announcements() -> List[Dict[str, Any]]:
                 "platform_number": ann.platform_number,
                 "original_transcript": ann.original_transcript,
                 "source_language": ann.source_language,
+                "is_alert": bool(getattr(ann, "is_alert", 0)),
+                "alert_priority": getattr(ann, "alert_priority", "NORMAL"),
                 "created_at": ann.created_at.isoformat(),
                 "cached_translations": translations
             })

@@ -25,6 +25,15 @@ class TestSynthesisRequest(BaseModel):
     station_code: str = "DEMO"
     platform_number: str = "1"
 
+class RTASyncRequest(BaseModel):
+    station_code: str
+    platform_number: Optional[str] = "1"
+    transcript: str
+    source_language: Optional[str] = "en"
+    is_alert: Optional[bool] = False
+    alert_priority: Optional[str] = "NORMAL"
+    announcement_type: Optional[str] = "regular"
+
 @router.post("/upload")
 async def upload_announcement(
     station_code: str = Form(...),
@@ -196,3 +205,91 @@ async def test_synthesis(req: TestSynthesisRequest):
         "audio_url": f"{settings.BASE_URL}/static/{rel_path}",
         "engine": engine
     }
+
+@router.post("/rta-sync")
+async def rta_sync_announcement(req: RTASyncRequest):
+    """
+    Direct sync endpoint for Real-Time Announcements (RTA) pulled from Station Announcer.
+    Accepts incoming station announcement or sudden alert, runs Multilingual Translation,
+    TTS synthesis, stores in SQLite, and returns translation matrix for the SETU client.
+    """
+    station_code = req.station_code.strip().upper()
+    platform_number = (req.platform_number or "1").strip().upper()
+    transcript = req.transcript.strip()
+    source_language = req.source_language or "en"
+    is_alert = bool(req.is_alert)
+    alert_priority = req.alert_priority or ("CRITICAL" if is_alert else "NORMAL")
+
+    print("\n" + "="*70)
+    print(f"📡  [SETU RTA SYNC - {'🚨 SUDDEN ALERT' if is_alert else 'ANNOUNCEMENT'}]")
+    print(f"   Station Code    : {station_code}")
+    print(f"   Platform Number : {platform_number}")
+    print(f"   Priority        : {alert_priority}")
+    print(f"   Transcript      : \"{transcript}\"")
+    print("="*70 + "\n", flush=True)
+
+    logger.info(f"Processing RTA sync: {station_code} P{platform_number} (Alert: {is_alert}): '{transcript}'")
+
+    # 1. Save original announcement record in SQLite DB
+    announcement = save_announcement(
+        station_code=station_code,
+        platform_number=platform_number,
+        original_transcript=transcript,
+        source_language=source_language,
+        is_alert=is_alert,
+        alert_priority=alert_priority
+    )
+
+    # 2. Translate into supported languages
+    translations = translate_to_all_supported_languages(transcript, source_lang=source_language)
+    if source_language not in translations:
+        translations[source_language] = transcript
+
+    cached_results = []
+
+    # 3. Synthesize speech for each language and store in cache
+    for lang_code, translated_text in translations.items():
+        try:
+            rel_audio_path, engine_used = synthesize_speech(
+                text=translated_text,
+                station_code=station_code,
+                platform_number=platform_number,
+                language_code=lang_code
+            )
+
+            cache_record = save_cached_audio(
+                announcement_id=announcement.id,
+                station_code=station_code,
+                platform_number=platform_number,
+                language_code=lang_code,
+                translated_text=translated_text,
+                audio_file_path=rel_audio_path,
+                synthesis_engine=engine_used
+            )
+
+            cached_results.append({
+                "language_code": lang_code,
+                "language_name": settings.SUPPORTED_LANGUAGES.get(lang_code, lang_code.upper()),
+                "translated_text": translated_text,
+                "audio_url": f"{settings.BASE_URL}/static/{rel_audio_path}",
+                "audio_file_path": rel_audio_path,
+                "synthesis_engine": engine_used
+            })
+        except Exception as e:
+            logger.error(f"Failed processing language '{lang_code}': {e}")
+
+    return {
+        "status": "success",
+        "message": f"Processed RTA {'alert' if is_alert else 'announcement'} for {station_code}.",
+        "announcement": {
+            "id": announcement.id,
+            "station_code": announcement.station_code,
+            "platform_number": announcement.platform_number,
+            "original_transcript": announcement.original_transcript,
+            "source_language": announcement.source_language,
+            "is_alert": is_alert,
+            "alert_priority": alert_priority,
+            "cached_translations": cached_results
+        }
+    }
+
