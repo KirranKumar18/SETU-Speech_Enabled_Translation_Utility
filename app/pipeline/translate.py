@@ -7,6 +7,7 @@ from typing import Dict, Optional
 logger = logging.getLogger("setu.translate")
 
 # Map 2-letter ISO codes to MyMemory language-region pairs for high accuracy
+#maps various iso codes to memory lang
 MYMEMORY_LANG_MAP = {
     "hi": "hi-IN",
     "ta": "ta-IN",
