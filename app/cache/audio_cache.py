@@ -191,6 +191,51 @@ def get_latest_announcement(station_code: Optional[str] = None, platform_number:
     finally:
         db.close()
 
+def find_announcement_by_transcript(station_code: str, transcript: str) -> Optional[Dict[str, Any]]:
+    """Find the most recent announcement with matching transcript text for a station.
+    
+    Returns the announcement dict with full cached_translations if found,
+    enabling the RTA sync endpoint to skip duplicate translate/TTS work.
+    """
+    db = SessionLocal()
+    try:
+        st_code = station_code.strip().upper()
+        normalized = transcript.strip()
+
+        announcement = db.query(AnnouncementRecord).filter(
+            AnnouncementRecord.station_code == st_code,
+            AnnouncementRecord.original_transcript == normalized
+        ).order_by(AnnouncementRecord.created_at.desc()).first()
+
+        if not announcement:
+            return None
+
+        # Gather cached translations
+        translations = []
+        for cache in announcement.cached_audios:
+            translations.append({
+                "language_code": cache.language_code,
+                "translated_text": cache.translated_text,
+                "audio_file_path": cache.audio_file_path,
+                "audio_url": f"http://localhost:8000/static/{cache.audio_file_path}",
+                "synthesis_engine": cache.synthesis_engine,
+                "created_at": cache.created_at.isoformat()
+            })
+
+        return {
+            "id": announcement.id,
+            "station_code": announcement.station_code,
+            "platform_number": announcement.platform_number,
+            "original_transcript": announcement.original_transcript,
+            "source_language": announcement.source_language,
+            "is_alert": bool(getattr(announcement, "is_alert", 0)),
+            "alert_priority": getattr(announcement, "alert_priority", "NORMAL"),
+            "created_at": announcement.created_at.isoformat(),
+            "cached_translations": translations
+        }
+    finally:
+        db.close()
+
 def list_all_announcements() -> List[Dict[str, Any]]:
     """List all stored station announcements along with available cached translations."""
     db = SessionLocal()

@@ -265,6 +265,24 @@
         let feedHistory = [];
         let lastAlertId = null;
 
+        // ── Dedup & Queue System ──
+        // Track transcripts we've already sent to /rta-sync (by hash)
+        const processedTranscripts = new Set();
+        // Sequential processing queue
+        const processingQueue = [];
+        let isProcessingQueue = false;
+
+        function transcriptHash(text) {
+            // Simple hash for client-side dedup (djb2)
+            let hash = 5381;
+            const s = (text || '').trim().toLowerCase();
+            for (let i = 0; i < s.length; i++) {
+                hash = ((hash << 5) + hash) + s.charCodeAt(i);
+                hash = hash & hash; // Convert to 32bit integer
+            }
+            return 'h' + Math.abs(hash).toString(36);
+        }
+
         // Language code to display name mapping
         const LANGUAGE_NAMES = {
             'hi': 'Hindi', 'ta': 'Tamil', 'te': 'Telugu', 'kn': 'Kannada',
@@ -336,6 +354,8 @@
             if (textStCode) textStCode.value = rtaStation;
             lastSeenId = 0;
             feedHistory = [];
+            processedTranscripts.clear();
+            processingQueue.length = 0;
             document.getElementById('rta-feed-list').innerHTML = '<div style="color: var(--text-sub); font-size: 12px; text-align: center; padding: 12px;">Connecting to Station Announcer for ' + rtaStation + '...</div>';
             pullRtaUpdates(true);
         }
@@ -375,18 +395,39 @@
             label.innerText = msg;
         }
 
+        let isPolling = false;
+
         async function pullRtaUpdates(isManual = false) {
+            if (isPolling) return;
+            isPolling = true;
+
             const stCode = rtaStation;
             try {
                 if (isManual) setRtaStatus('syncing', `POLLING ${stCode}...`);
 
-                const res = await fetch(`${announcerBaseUrl}/api/station/${stCode}/poll?since_id=${lastSeenId}`);
-                if (!res.ok) {
-                    setRtaStatus('offline', `ANNOUNCER OFFLINE (PORT 8001)`);
-                    return;
+                // 1. Try same-origin proxy first (Zero CORS issues), fallback to direct announcer URL
+                let data = null;
+                try {
+                    const proxyRes = await fetch(`/api/announcements/rta-poll?station_code=${stCode}&since_id=${lastSeenId}`);
+                    if (proxyRes.ok) {
+                        const json = await proxyRes.json();
+                        if (json && json.status === 'success') {
+                            data = json;
+                        }
+                    }
+                } catch (e) {
+                    console.warn('Proxy poll error, falling back to direct announcer fetch:', e);
                 }
 
-                const data = await res.json();
+                if (!data) {
+                    const directRes = await fetch(`${announcerBaseUrl}/api/station/${stCode}/poll?since_id=${lastSeenId}`);
+                    if (!directRes.ok) {
+                        setRtaStatus('offline', `ANNOUNCER OFFLINE (PORT 8001)`);
+                        return;
+                    }
+                    data = await directRes.json();
+                }
+
                 setRtaStatus('online', `LIVE RTA LINKED: ${stCode} (PORT 8001)`);
 
                 // Check Sudden Alerts
@@ -394,7 +435,7 @@
                 if (data.active_alerts && data.active_alerts.length > 0) {
                     const topAlert = data.active_alerts[0];
                     alertBanner.style.display = 'block';
-                    document.getElementById('rta-alert-priority').innerText = `${topAlert.priority} SUDDEN ALERT (${topAlert.platform_number || 'ALL'})`;
+                    document.getElementById('rta-alert-priority').innerText = `${topAlert.priority || 'CRITICAL'} SUDDEN ALERT (${topAlert.platform_number || 'ALL'})`;
                     document.getElementById('rta-alert-time').innerText = topAlert.created_at || 'JUST NOW';
                     document.getElementById('rta-alert-text').innerText = topAlert.transcript;
 
@@ -409,44 +450,63 @@
 
                 // If there are newly arrived announcements or alerts
                 if (data.has_updates) {
+                    // Update lastSeenId IMMEDIATELY so next poll tick won't re-fetch
+                    lastSeenId = data.latest_id;
+
                     const allNew = [...(data.new_announcements || []), ...(data.new_alerts || [])];
                     allNew.sort((a, b) => a.id - b.id);
 
                     for (const item of allNew) {
-                        await processIncomingRtaItem(item);
                         feedHistory.unshift(item);
+                        // Queue for background processing (translate/TTS) — only if not already processed
+                        enqueueForProcessing(item);
                     }
 
-                    lastSeenId = data.latest_id;
                     renderRtaFeed();
+
+                    // Update the active card UI immediately (no backend call)
+                    if (allNew.length > 0) {
+                        updateActiveCardUI(allNew[allNew.length - 1]);
+                    }
                 } else if (feedHistory.length === 0 && lastSeenId === 0) {
                     await fetchInitialFeed(stCode);
                 }
 
             } catch (err) {
+                console.error('RTA pull error:', err);
                 setRtaStatus('offline', `ANNOUNCER OFFLINE (PORT 8001)`);
+            } finally {
+                isPolling = false;
             }
         }
 
-        async function fetchInitialFeed(stCode) {
-            try {
-                const res = await fetch(`${announcerBaseUrl}/api/station/${stCode}/feed`);
-                if (res.ok) {
-                    const data = await res.json();
-                    if (data.announcements && data.announcements.length > 0) {
-                        feedHistory = [...data.announcements];
-                        const latest = data.announcements[0];
-                        lastSeenId = Math.max(...data.announcements.map(a => a.id), 0);
-                        renderRtaFeed();
-                        await processIncomingRtaItem(latest);
-                    }
-                }
-            } catch (e) {
-                console.log('Error loading initial feed:', e);
+        // ── Enqueue item for sequential backend processing ──
+        function enqueueForProcessing(item) {
+            const hash = transcriptHash(item.transcript);
+            if (processedTranscripts.has(hash)) {
+                console.log(`[RTA] Skipping already-processed: "${item.transcript.slice(0, 50)}…"`);
+                return;
             }
+            processedTranscripts.add(hash);
+            processingQueue.push(item);
+            drainProcessingQueue();
         }
 
-        async function processIncomingRtaItem(item) {
+        // ── Process queue items one-at-a-time ──
+        async function drainProcessingQueue() {
+            if (isProcessingQueue) return;
+            isProcessingQueue = true;
+
+            while (processingQueue.length > 0) {
+                const item = processingQueue.shift();
+                await processIncomingRtaItem(item);
+            }
+
+            isProcessingQueue = false;
+        }
+
+        // ── Update active card UI without calling backend ──
+        function updateActiveCardUI(item) {
             const isAlert = item.type === 'sudden_alert';
             const card = document.getElementById('rta-active-card');
             if (isAlert) {
@@ -458,15 +518,54 @@
                 document.getElementById('rta-active-platform').innerText = `PLATFORM ${item.platform_number || '1'}`;
                 document.getElementById('rta-active-train').innerText = (item.train_number ? `${item.train_number} ` : '') + (item.train_name || 'Express');
             }
-
             document.getElementById('rta-active-time').innerText = item.created_at || 'Just now';
             document.getElementById('rta-active-text').innerText = item.transcript;
-            document.getElementById('rta-active-cache-status').innerText = 'Synthesizing 9 Indic translations & caching...';
+            document.getElementById('rta-active-cache-status').innerText = 'Queued for translation & caching...';
 
             const txField = document.getElementById('transcript');
             if (txField) txField.value = item.transcript;
+        }
 
-            // Automatically send to SETU backend (Port 8000) for multilingual translation & TTS synthesis
+        async function fetchInitialFeed(stCode) {
+            try {
+                let data = null;
+                try {
+                    const proxyRes = await fetch(`/api/announcements/rta-feed?station_code=${stCode}`);
+                    if (proxyRes.ok) {
+                        const json = await proxyRes.json();
+                        if (json && json.status === 'success') {
+                            data = json;
+                        }
+                    }
+                } catch (e) {}
+
+                if (!data) {
+                    const directRes = await fetch(`${announcerBaseUrl}/api/station/${stCode}/feed`);
+                    if (directRes.ok) data = await directRes.json();
+                }
+
+                if (data && data.announcements && data.announcements.length > 0) {
+                    feedHistory = [...data.announcements];
+                    const latest = data.announcements[0];
+                    lastSeenId = Math.max(...data.announcements.map(a => a.id), 0);
+                    renderRtaFeed();
+                    // Enqueue only the latest for processing (don't bulk-process seed data)
+                    enqueueForProcessing(latest);
+                    updateActiveCardUI(latest);
+                }
+            } catch (e) {
+                console.log('Error loading initial feed:', e);
+            }
+        }
+
+        async function processIncomingRtaItem(item) {
+            const isAlert = item.type === 'sudden_alert';
+
+            // Update active card UI
+            updateActiveCardUI(item);
+            document.getElementById('rta-active-cache-status').innerText = 'Synthesizing 9 Indic translations & caching...';
+
+            // Send to SETU backend (Port 8000) for multilingual translation & TTS synthesis
             try {
                 const syncRes = await fetch('/api/announcements/rta-sync', {
                     method: 'POST',
@@ -484,14 +583,15 @@
                 if (syncRes.ok) {
                     const syncData = await syncRes.json();
                     if (syncData.status === 'success' && syncData.announcement) {
-                        document.getElementById('rta-active-cache-status').innerText = 'Cached & available for 9 Indic IVR dialects';
+                        const fromCache = syncData.from_cache ? ' (from cache ⚡)' : '';
+                        document.getElementById('rta-active-cache-status').innerText = `✅ Cached & available for 9 Indic IVR dialects${fromCache}`;
                         renderLanguageMatrix(syncData.announcement.cached_translations);
                         playChime(isAlert);
                     }
                 }
             } catch (err) {
                 console.error('Error auto-syncing RTA item with SETU backend:', err);
-                document.getElementById('rta-active-cache-status').innerText = 'Cached locally in browser';
+                document.getElementById('rta-active-cache-status').innerText = 'Backend sync error — cached locally only';
             }
         }
 
